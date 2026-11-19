@@ -57,4 +57,24 @@ abstract final class Validators {
     }
     return null;
   }
+
+  /// Horas da duração: opcional, apenas números, até 999.
+  static String? durationHours(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final hours = int.tryParse(text);
+    if (hours == null || hours < 0) return 'Use apenas números';
+    if (hours > 999) return 'Máximo 999 h';
+    return null;
+  }
+
+  /// Minutos da duração: opcional, apenas números, de 0 a 59.
+  static String? durationMinutes(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final minutes = int.tryParse(text);
+    if (minutes == null || minutes < 0) return 'Use apenas números';
+    if (minutes > 59) return 'De 0 a 59';
+    return null;
+  }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -24,6 +25,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
+  late final TextEditingController _hoursController;
+  late final TextEditingController _minutesController;
   late TaskPriority _priority;
   DateTime? _dueDate;
   late bool _isDone;
@@ -38,6 +41,11 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     _titleController = TextEditingController(text: task?.title ?? '');
     _descriptionController =
         TextEditingController(text: task?.description ?? '');
+    final duration = task?.durationMinutes;
+    _hoursController = TextEditingController(
+        text: duration == null || duration ~/ 60 == 0 ? '' : '${duration ~/ 60}');
+    _minutesController = TextEditingController(
+        text: duration == null || duration % 60 == 0 ? '' : '${duration % 60}');
     _priority = task?.priority ?? TaskPriority.medium;
     _dueDate = task?.dueDate;
     _isDone = task?.isDone ?? false;
@@ -47,7 +55,18 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _hoursController.dispose();
+    _minutesController.dispose();
     super.dispose();
+  }
+
+  /// Converte os campos de horas e minutos em minutos totais
+  /// (null quando nenhuma duração foi informada).
+  int? get _durationInMinutes {
+    final hours = int.tryParse(_hoursController.text.trim()) ?? 0;
+    final minutes = int.tryParse(_minutesController.text.trim()) ?? 0;
+    final total = hours * 60 + minutes;
+    return total > 0 ? total : null;
   }
 
   Future<void> _pickDate() async {
@@ -75,6 +94,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           priority: _priority,
           dueDate: _dueDate,
           clearDueDate: _dueDate == null,
+          durationMinutes: _durationInMinutes,
+          clearDuration: _durationInMinutes == null,
           isDone: _isDone,
         ));
       } else {
@@ -83,6 +104,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           description: _descriptionController.text,
           priority: _priority,
           dueDate: _dueDate,
+          durationMinutes: _durationInMinutes,
         );
       }
       if (!mounted) return;
@@ -204,6 +226,54 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                             icon: const Icon(Icons.clear),
                             onPressed: () => setState(() => _dueDate = null),
                           ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Duração',
+                      prefixIcon: Icon(Icons.timer_outlined),
+                      helperText: 'Opcional. Tempo estimado para fazer a tarefa.',
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            key: const Key('task_duration_hours'),
+                            controller: _hoursController,
+                            validator: Validators.durationHours,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(3),
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Horas',
+                              suffixText: 'h',
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            key: const Key('task_duration_minutes'),
+                            controller: _minutesController,
+                            validator: Validators.durationMinutes,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(2),
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Minutos',
+                              suffixText: 'min',
+                              isDense: true,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),

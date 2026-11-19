@@ -21,13 +21,16 @@ Cada usuário vê e gerencia somente as próprias tarefas.
   **e-mail já cadastrado** e **login inválido**
 
 **Tarefas (CRUD)**
-- **Criar** tarefa com título, descrição, prioridade (Baixa/Média/Alta) e prazo opcional
+- **Criar** tarefa com título, descrição, prioridade (Baixa/Média/Alta), prazo opcional
+  e **duração estimada** opcional (horas e minutos)
 - **Listar** tarefas do usuário, ordenadas (pendentes primeiro, depois por prioridade)
 - **Atualizar** pelo formulário de edição ou marcando/desmarcando como concluída na lista
 - **Excluir** pela lista ou pela tela de edição, sempre com confirmação
 - Filtro por **Todas / Pendentes / Concluídas** (com contadores) e **busca** por texto
 - Destaque de tarefas **atrasadas**
-- Validação de formulário (título obrigatório, 3–80 caracteres; descrição até 500)
+- Duração exibida na lista (ex.: *1h 30min*) e editável na tela de edição
+- Validação de formulário (título obrigatório, 3–80 caracteres; descrição até 500;
+  duração somente com números, minutos de 0 a 59)
 
 ---
 
@@ -188,11 +191,16 @@ CREATE TABLE tasks (
   description TEXT NOT NULL DEFAULT '',
   priority    INTEGER NOT NULL DEFAULT 1,   -- 0 baixa, 1 média, 2 alta
   due_date    TEXT,                          -- ISO 8601, opcional
+  duration_minutes INTEGER,                  -- duração estimada em minutos, opcional
   is_done     INTEGER NOT NULL DEFAULT 0,
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
 );
 ```
+
+A base está na **versão 2**: a coluna `duration_minutes` foi adicionada depois da primeira
+versão. Quem já tinha o app instalado recebe a coluna automaticamente (`onUpgrade` no
+`DatabaseService`, com `ALTER TABLE`), sem perder as tarefas já cadastradas.
 
 Todas as consultas de tarefas filtram por `user_id`, inclusive `UPDATE` e `DELETE`, garantindo
 que um usuário não acesse nem altere tarefas de outro.
@@ -201,10 +209,12 @@ que um usuário não acesse nem altere tarefas de outro.
 
 ## Testes
 
-O projeto possui **13 testes automatizados** (`flutter test`), usando um SQLite real em memória:
+O projeto possui **16 testes automatizados** (`flutter test`), usando um SQLite real em memória:
 
 - `validators_test.dart` — regras de validação dos formulários
 - `services_test.dart` — cadastro, e-mail duplicado, login válido/inválido, sessão,
-  CRUD completo, filtro/busca e isolamento entre usuários
+  CRUD completo, duração da tarefa, filtro/busca, isolamento entre usuários e
+  atualização do banco da versão 1 para a 2
 - `app_flow_test.dart` — fluxo pela interface: validação de campos vazios, login inválido,
-  cadastro → criar → editar → concluir → excluir → logout → bloqueio da Home sem login
+  cadastro → criar (com duração) → editar → concluir → excluir → logout →
+  bloqueio da Home sem login

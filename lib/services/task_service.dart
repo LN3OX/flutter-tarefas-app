@@ -78,6 +78,7 @@ class TaskService extends ChangeNotifier {
     String description = '',
     TaskPriority priority = TaskPriority.medium,
     DateTime? dueDate,
+    int? durationMinutes,
   }) async {
     final now = DateTime.now();
     final task = await _db.insertTask(Task(
@@ -86,6 +87,7 @@ class TaskService extends ChangeNotifier {
       description: description.trim(),
       priority: priority,
       dueDate: dueDate,
+      durationMinutes: durationMinutes,
       createdAt: now,
       updatedAt: now,
     ));

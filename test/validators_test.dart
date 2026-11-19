@@ -28,5 +28,14 @@ void main() {
       expect(Validators.taskTitle('Estudar Flutter'), isNull);
       expect(Validators.taskDescription('a' * 501), contains('500'));
     });
+
+    test('duração', () {
+      expect(Validators.durationHours(''), isNull);
+      expect(Validators.durationHours('2'), isNull);
+      expect(Validators.durationHours('1000'), 'Máximo 999 h');
+      expect(Validators.durationMinutes(''), isNull);
+      expect(Validators.durationMinutes('45'), isNull);
+      expect(Validators.durationMinutes('60'), 'De 0 a 59');
+    });
   });
 }

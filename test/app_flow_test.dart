@@ -93,21 +93,33 @@ void main() {
         find.byKey(const Key('task_title')), 'Entregar trabalho');
     await tester.enterText(
         find.byKey(const Key('task_description')), 'Projeto Flutter');
+    await tester.enterText(find.byKey(const Key('task_duration_minutes')), '75');
+    await tester.tap(find.byKey(const Key('task_save')));
+    await tester.pumpAndSettle();
+    expect(find.text('De 0 a 59'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('task_duration_hours')), '1');
+    await tester.enterText(find.byKey(const Key('task_duration_minutes')), '30');
     await tapAndWait(tester, find.byKey(const Key('task_save')));
 
     // Read
     expect(find.text('Entregar trabalho'), findsOneWidget);
     expect(find.text('Projeto Flutter'), findsOneWidget);
+    expect(find.text('1h 30min'), findsOneWidget);
 
     // Update: abre a edição, altera título e marca como concluída
     await tester.tap(find.text('Entregar trabalho'));
     await tester.pumpAndSettle();
     expect(find.text('Editar tarefa'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, '1'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, '30'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('task_duration_hours')), '2');
+    await tester.enterText(find.byKey(const Key('task_duration_minutes')), '');
     await tester.enterText(
         find.byKey(const Key('task_title')), 'Trabalho entregue');
     await tester.tap(find.byKey(const Key('task_done_switch')));
     await tapAndWait(tester, find.byKey(const Key('task_save')));
     expect(find.text('Trabalho entregue'), findsOneWidget);
+    expect(find.text('2h'), findsOneWidget);
     expect(find.text('Concluídas (1)'), findsOneWidget);
 
     // Delete

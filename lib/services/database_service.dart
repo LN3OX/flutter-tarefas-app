@@ -16,7 +16,7 @@ import '../models/task.dart';
 /// - Desktop/testes: `sqflite_common_ffi`.
 class DatabaseService {
   static const _dbName = 'tarefas_app.db';
-  static const _dbVersion = 1;
+  static const _dbVersion = 2;
 
   final DatabaseFactory _factory;
   final String? _pathOverride;
@@ -52,6 +52,7 @@ class DatabaseService {
         version: _dbVersion,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: _createSchema,
+        onUpgrade: _upgradeSchema,
       ),
     );
   }
@@ -75,12 +76,21 @@ class DatabaseService {
         description TEXT NOT NULL DEFAULT '',
         priority INTEGER NOT NULL DEFAULT 1,
         due_date TEXT,
+        duration_minutes INTEGER,
         is_done INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
     ''');
     await db.execute('CREATE INDEX idx_tasks_user ON tasks(user_id)');
+  }
+
+  /// Atualiza bancos criados em versões anteriores do app sem perder dados.
+  Future<void> _upgradeSchema(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Versão 2: duração estimada da tarefa.
+      await db.execute('ALTER TABLE tasks ADD COLUMN duration_minutes INTEGER');
+    }
   }
 
   Future<void> close() async {

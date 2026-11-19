@@ -61,6 +61,12 @@ class TaskTile extends StatelessWidget {
                   text: task.priority.label,
                   color: _priorityColor(theme.colorScheme),
                 ),
+                if (task.durationLabel != null)
+                  _Badge(
+                    icon: Icons.timer_outlined,
+                    text: task.durationLabel!,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 if (task.dueDate != null)
                   _Badge(
                     icon: Icons.event,

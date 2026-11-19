@@ -25,6 +25,9 @@ class Task {
   final String description;
   final TaskPriority priority;
   final DateTime? dueDate;
+
+  /// Duração estimada da tarefa, em minutos (opcional).
+  final int? durationMinutes;
   final bool isDone;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -36,6 +39,7 @@ class Task {
     this.description = '',
     this.priority = TaskPriority.medium,
     this.dueDate,
+    this.durationMinutes,
     this.isDone = false,
     required this.createdAt,
     required this.updatedAt,
@@ -50,6 +54,7 @@ class Task {
       description: (map['description'] as String?) ?? '',
       priority: TaskPriority.fromValue(map['priority'] as int),
       dueDate: due == null ? null : DateTime.parse(due),
+      durationMinutes: map['duration_minutes'] as int?,
       isDone: (map['is_done'] as int) == 1,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -64,6 +69,7 @@ class Task {
       'description': description,
       'priority': priority.value,
       'due_date': dueDate?.toIso8601String(),
+      'duration_minutes': durationMinutes,
       'is_done': isDone ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -77,6 +83,8 @@ class Task {
     TaskPriority? priority,
     DateTime? dueDate,
     bool clearDueDate = false,
+    int? durationMinutes,
+    bool clearDuration = false,
     bool? isDone,
     DateTime? updatedAt,
   }) {
@@ -87,10 +95,23 @@ class Task {
       description: description ?? this.description,
       priority: priority ?? this.priority,
       dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
+      durationMinutes:
+          clearDuration ? null : (durationMinutes ?? this.durationMinutes),
       isDone: isDone ?? this.isDone,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+
+  /// Duração formatada para exibição, ex.: "1h 30min", "2h" ou "45min".
+  String? get durationLabel {
+    final total = durationMinutes;
+    if (total == null || total <= 0) return null;
+    final hours = total ~/ 60;
+    final minutes = total % 60;
+    if (hours == 0) return '${minutes}min';
+    if (minutes == 0) return '${hours}h';
+    return '${hours}h ${minutes}min';
   }
 
   /// Verdadeiro se a tarefa não foi concluída e o prazo já passou.

@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:tarefas_app/models/task.dart';
 import 'package:tarefas_app/services/auth_service.dart';
 import 'package:tarefas_app/services/database_service.dart';
@@ -84,7 +87,8 @@ void main() {
           title: 'Estudar Flutter',
           description: 'Rotas e Provider',
           priority: TaskPriority.high,
-          dueDate: DateTime(2030, 1, 10));
+          dueDate: DateTime(2030, 1, 10),
+          durationMinutes: 90);
       await service.create(title: 'Comprar pão', priority: TaskPriority.low);
 
       // Read
@@ -93,9 +97,15 @@ void main() {
       final saved = service.allTasks.first;
       expect(saved.description, 'Rotas e Provider');
       expect(saved.dueDate, DateTime(2030, 1, 10));
+      expect(saved.durationMinutes, 90);
+      expect(saved.durationLabel, '1h 30min');
+      expect(service.allTasks.last.durationMinutes, isNull);
 
       // Update
-      await service.update(saved.copyWith(title: 'Estudar Dart', clearDueDate: true));
+      await service.update(saved.copyWith(
+          title: 'Estudar Dart', clearDueDate: true, durationMinutes: 45));
+      expect(service.allTasks.firstWhere((t) => t.title == 'Estudar Dart')
+          .durationLabel, '45min');
       await service.toggleDone(service.allTasks.firstWhere((t) => t.title == 'Comprar pão'));
       expect(service.allTasks.any((t) => t.title == 'Estudar Dart' && t.dueDate == null),
           isTrue);
@@ -133,6 +143,63 @@ void main() {
       expect(await db.deleteTask(id: anaTask.id!, userId: bruno.id!), 0);
       expect(await db.getTasks(ana.id!), hasLength(1));
     });
+  });
+
+  test('banco da versão 1 ganha a coluna de duração sem perder tarefas',
+      () async {
+    final dir = await Directory.systemTemp.createTemp('tarefas_test');
+    final path = '${dir.path}/antigo.db';
+
+    // Cria um banco no formato antigo (sem duration_minutes).
+    final old = await databaseFactoryFfiNoIsolate.openDatabase(path,
+        options: OpenDatabaseOptions(
+          version: 1,
+          onCreate: (db, _) async {
+            await db.execute('CREATE TABLE users (id INTEGER PRIMARY KEY '
+                'AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, '
+                'password_hash TEXT NOT NULL, salt TEXT NOT NULL, '
+                'created_at TEXT NOT NULL)');
+            await db.execute('CREATE TABLE tasks (id INTEGER PRIMARY KEY '
+                'AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, '
+                "description TEXT NOT NULL DEFAULT '', priority INTEGER NOT NULL "
+                'DEFAULT 1, due_date TEXT, is_done INTEGER NOT NULL DEFAULT 0, '
+                'created_at TEXT NOT NULL, updated_at TEXT NOT NULL)');
+          },
+        ));
+    final now = DateTime(2026).toIso8601String();
+    await old.insert('users', {'name': 'Ana', 'email': 'ana@email.com',
+        'password_hash': 'x', 'salt': 'y', 'created_at': now});
+    await old.insert('tasks', {'user_id': 1, 'title': 'Tarefa antiga',
+        'created_at': now, 'updated_at': now});
+    await old.close();
+
+    final upgraded =
+        DatabaseService(factory: databaseFactoryFfiNoIsolate, path: path);
+    final tasks = await upgraded.getTasks(1);
+    expect(tasks.single.title, 'Tarefa antiga');
+    expect(tasks.single.durationMinutes, isNull);
+
+    await upgraded.updateTask(tasks.single.copyWith(durationMinutes: 20));
+    expect((await upgraded.getTasks(1)).single.durationLabel, '20min');
+
+    await upgraded.close();
+    await dir.delete(recursive: true);
+  });
+
+  test('Task.durationLabel', () {
+    Task withDuration(int? minutes) => Task(
+          userId: 1,
+          title: 'x',
+          durationMinutes: minutes,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+    expect(withDuration(null).durationLabel, isNull);
+    expect(withDuration(30).durationLabel, '30min');
+    expect(withDuration(120).durationLabel, '2h');
+    expect(withDuration(135).durationLabel, '2h 15min');
+    expect(withDuration(135).copyWith(clearDuration: true).durationMinutes,
+        isNull);
   });
 
   test('Task.isOverdue', () {
